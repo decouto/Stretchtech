@@ -47,3 +47,11 @@ Temporary Items
 *.lnp
 *.dep
 *.log
+*.ioc
+
+
+Generated code
+RTE
+Objects
+Listings
+STM32F411
