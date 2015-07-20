@@ -48,9 +48,12 @@ Temporary Items
 *.dep
 *.log
 *.ioc
-
+*.bak
+*.TMP
 
 Generated code
 Objects
 Listings
+Examples
 STM32F411
+CMSIS
