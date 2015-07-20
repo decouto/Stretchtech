@@ -196,13 +196,13 @@ void HAL_I2S_MspInit(I2S_HandleTypeDef* hi2s)
     hdma_spi2_rx.Init.PeriphInc = DMA_PINC_DISABLE;
     hdma_spi2_rx.Init.MemInc = DMA_MINC_ENABLE;
     hdma_spi2_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-    hdma_spi2_rx.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+    hdma_spi2_rx.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
     hdma_spi2_rx.Init.Mode = DMA_CIRCULAR;
     hdma_spi2_rx.Init.Priority = DMA_PRIORITY_LOW;
     hdma_spi2_rx.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
     hdma_spi2_rx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_HALFFULL;
-    hdma_spi2_rx.Init.MemBurst = DMA_MBURST_INC4;
-    hdma_spi2_rx.Init.PeriphBurst = DMA_PBURST_INC4;
+    hdma_spi2_rx.Init.MemBurst = DMA_MBURST_SINGLE;
+    hdma_spi2_rx.Init.PeriphBurst = DMA_PBURST_SINGLE;
     HAL_DMA_Init(&hdma_spi2_rx);
 
     __HAL_LINKDMA(hi2s,hdmarx,hdma_spi2_rx);
@@ -246,13 +246,13 @@ void HAL_I2S_MspInit(I2S_HandleTypeDef* hi2s)
     hdma_spi3_rx.Init.PeriphInc = DMA_PINC_DISABLE;
     hdma_spi3_rx.Init.MemInc = DMA_MINC_ENABLE;
     hdma_spi3_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-    hdma_spi3_rx.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+    hdma_spi3_rx.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
     hdma_spi3_rx.Init.Mode = DMA_CIRCULAR;
     hdma_spi3_rx.Init.Priority = DMA_PRIORITY_LOW;
     hdma_spi3_rx.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
     hdma_spi3_rx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_HALFFULL;
-    hdma_spi3_rx.Init.MemBurst = DMA_MBURST_INC4;
-    hdma_spi3_rx.Init.PeriphBurst = DMA_PBURST_INC4;
+    hdma_spi3_rx.Init.MemBurst = DMA_MBURST_SINGLE;
+    hdma_spi3_rx.Init.PeriphBurst = DMA_PBURST_SINGLE;
     HAL_DMA_Init(&hdma_spi3_rx);
 
     __HAL_LINKDMA(hi2s,hdmarx,hdma_spi3_rx);

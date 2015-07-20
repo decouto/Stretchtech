@@ -1,5 +1,5 @@
 #####################################################
-# Date:        Saturday, 18/July/'15
+# Date:        Sunday, 19/July/'15
 # Interface:   Simulation (NONE)
 # Product:     STA321MP DK
 # Description: <none>
@@ -9,25 +9,25 @@
 
 Reg[00h] = 9Bh ## Configuration Register A
 Reg[01h] = 00h ## Configuration Register B
-Reg[02h] = 20h ## Configuration Register C
+Reg[02h] = 21h ## Configuration Register C
 Reg[03h] = FEh ## Configuration Register D
-Reg[04h] = 18h ## Configuration Register E
+Reg[04h] = 00h ## Configuration Register E
 Reg[05h] = 00h ## Configuration Register F
 Reg[06h] = 00h ## Configuration Register G
 Reg[07h] = 7Ah ## Configuration Register H
 Reg[08h] = 80h ## Configuration Register I
 Reg[09h] = 00h ## Master Mute
 Reg[0Ah] = 00h ## Master Volume
-Reg[0Bh] = 54h ## Channel 1 Volume
-Reg[0Ch] = 54h ## Channel 2 Volume
-Reg[0Dh] = 60h ## Channel 3 Volume
-Reg[0Eh] = 48h ## Channel 4 Volume
+Reg[0Bh] = 2Eh ## Channel 1 Volume
+Reg[0Ch] = 2Eh ## Channel 2 Volume
+Reg[0Dh] = 34h ## Channel 3 Volume
+Reg[0Eh] = 34h ## Channel 4 Volume
 Reg[0Fh] = 48h ## Channel 5 Volume
 Reg[10h] = 60h ## Channel 6 Volume
 Reg[11h] = 60h ## Channel 7 Volume
 Reg[12h] = 60h ## Channel 8 Volume
 Reg[13h] = 10h ## Channel 1 Mute, VolBP, Trim
-Reg[14h] = 90h ## Channel 2 Mute, VolBP, Trim
+Reg[14h] = 10h ## Channel 2 Mute, VolBP, Trim
 Reg[15h] = 10h ## Channel 3 Mute, VolBP, Trim
 Reg[16h] = 10h ## Channel 4 Mute, VolBP, Trim
 Reg[17h] = 10h ## Channel 5 Mute, VolBP, Trim
