@@ -1,6 +1,6 @@
 Configuration	STCubeGenerated
 STM32CubeMX 	4.8.0
-Date	07/17/2015
+Date	07/20/2015
 MCU	STM32F429ZITx
 
 
@@ -19,9 +19,7 @@ I2S3	Half-Duplex Slave	I2S3_WS	PA4
 SAI1	Asynchronous Slave	SAI1_SD_A	PE6
 SAI1	Asynchronous Slave	SAI1_SCK_A	PE5
 SAI1	Asynchronous Slave	SAI1_FS_A	PE4
-SAI1	Asynchronous Slave	SAI1_SD_B	PE3
-SAI1	Asynchronous Slave	SAI1_SCK_B	PF8
-SAI1	Asynchronous Slave	SAI1_FS_B	PF9
+SAI1	Synchronous Slave	SAI1_SD_B	PE3
 SYS	Serial Wire Debug (SWD)	SYS_JTCK-SWCLK	PA14
 SYS	Serial Wire Debug (SWD)	SYS_JTMS-SWDIO	PA13
 USART2	Asynchronous	USART2_RX	PA3
@@ -42,8 +40,6 @@ Pin Nb	PINs	FUNCTIONs	LABELs
 5	PE6	SAI1_SD_A	
 10	PF0	I2C2_SDA	
 11	PF1	I2C2_SCL	
-20	PF8	SAI1_SCK_B	
-21	PF9	SAI1_FS_B	
 29	PC3	I2S2_SD	
 34	PA0/WKUP	USART2_CTS	
 35	PA1	USART2_RTS	

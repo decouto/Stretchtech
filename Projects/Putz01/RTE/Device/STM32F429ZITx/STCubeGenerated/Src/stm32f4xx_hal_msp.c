@@ -487,8 +487,8 @@ void HAL_SAI_MspInit(SAI_HandleTypeDef* hsai)
     hdma_sai1_a.Init.Priority = DMA_PRIORITY_LOW;
     hdma_sai1_a.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
     hdma_sai1_a.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_HALFFULL;
-    hdma_sai1_a.Init.MemBurst = DMA_MBURST_INC8;
-    hdma_sai1_a.Init.PeriphBurst = DMA_PBURST_INC8;
+    hdma_sai1_a.Init.MemBurst = DMA_MBURST_INC4;
+    hdma_sai1_a.Init.PeriphBurst = DMA_PBURST_INC4;
     HAL_DMA_Init(&hdma_sai1_a);
 
     /* Several peripheral DMA handle pointers point to the same DMA handle.
@@ -508,9 +508,7 @@ void HAL_SAI_MspInit(SAI_HandleTypeDef* hsai)
     SAI1_client ++;
     
     /**SAI1_B_Block_B GPIO Configuration    
-    PE3     ------> SAI1_SD_B
-    PF8     ------> SAI1_SCK_B
-    PF9     ------> SAI1_FS_B 
+    PE3     ------> SAI1_SD_B 
     */
     GPIO_InitStruct.Pin = GPIO_PIN_3;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -518,13 +516,6 @@ void HAL_SAI_MspInit(SAI_HandleTypeDef* hsai)
     GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
     GPIO_InitStruct.Alternate = GPIO_AF6_SAI1;
     HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
-
-    GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
-    GPIO_InitStruct.Alternate = GPIO_AF6_SAI1;
-    HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
     /* Peripheral DMA init*/
     
@@ -539,8 +530,8 @@ void HAL_SAI_MspInit(SAI_HandleTypeDef* hsai)
     hdma_sai1_b.Init.Priority = DMA_PRIORITY_LOW;
     hdma_sai1_b.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
     hdma_sai1_b.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_HALFFULL;
-    hdma_sai1_b.Init.MemBurst = DMA_MBURST_INC8;
-    hdma_sai1_b.Init.PeriphBurst = DMA_PBURST_INC8;
+    hdma_sai1_b.Init.MemBurst = DMA_MBURST_INC4;
+    hdma_sai1_b.Init.PeriphBurst = DMA_PBURST_INC4;
     HAL_DMA_Init(&hdma_sai1_b);
 
     /* Several peripheral DMA handle pointers point to the same DMA handle.
@@ -583,13 +574,9 @@ void HAL_SAI_MspDeInit(SAI_HandleTypeDef* hsai)
       }
     
     /**SAI1_B_Block_B GPIO Configuration    
-    PE3     ------> SAI1_SD_B
-    PF8     ------> SAI1_SCK_B
-    PF9     ------> SAI1_FS_B 
+    PE3     ------> SAI1_SD_B 
     */
     HAL_GPIO_DeInit(GPIOE, GPIO_PIN_3);
-
-    HAL_GPIO_DeInit(GPIOF, GPIO_PIN_8|GPIO_PIN_9);
 
     HAL_DMA_DeInit(hsai->hdmarx);
     HAL_DMA_DeInit(hsai->hdmatx);

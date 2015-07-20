@@ -17,7 +17,7 @@ void Putz01Assert(uint8_t* file, uint32_t line) {
 	while(1);
 }
 
-void DumpHWds (uint16_t *p, uint16_t len, char *note) {
+void DumpHWds (uint16_t *p, uint16_t len, const char *note) {
 	if (note) printf (note);
 	for (uint16_t i = 0; i != len; i++) {
 		if (i && !(i & 15)) puts ("\r");
@@ -27,7 +27,7 @@ void DumpHWds (uint16_t *p, uint16_t len, char *note) {
 }
 
 #define SWAPHWDS(x)	((((x)&0x0000ffff)<<16)|(((x)&0xffff0000)>>16))
-void DumpFWds (uint32_t *p, uint16_t len, char *note) {
+void DumpFWds (uint32_t *p, uint16_t len, const char *note) {
 	if (note) printf (note);
 	for (uint16_t i = 0; i != len; i++) {
 		if (i && !(i & 15)) puts ("\r");
@@ -80,14 +80,23 @@ bool Putz01Run(void) {
 	memset(I2S2Buf,0,sizeof(I2S2Buf)); 
 	memset(&I2S3BufCtl,0,sizeof(I2S3BufCtl)); 
 	memset(I2S3Buf,0,sizeof(I2S3Buf)); 
+	memset(&SaiABufCtl,0,sizeof(SaiABufCtl)); 
+	memset(SaiABuf,0,sizeof(SaiABuf)); 
+	memset(&SaiBBufCtl,0,sizeof(SaiBBufCtl)); 
+	memset(SaiBBuf,0,sizeof(SaiBBuf)); 
 	Putz01I2S2Start();
 	Putz01I2S3Start();
+	Putz01SaiAStart();
+	Putz01SaiBStart();
+	
 	while (1) {
 //		HAL_Delay(1000);
 //		for (int i = 0; i < (1<<20); i++); 
 		Putz01HandleButtons();
 		Putz01I2S2Proc();
 		Putz01I2S3Proc();
+		Putz01SaiAProc();
+		Putz01SaiBProc();
 	};
 //	return true;
 }
@@ -125,7 +134,6 @@ void WaitForI2sWs(I2S_HandleTypeDef *h) {
 	} else {
 		PUTZ_ASSERT(false);
 	}
-	
 }
 
 I2sBufCtl_t I2S2BufCtl;
@@ -151,7 +159,13 @@ void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s) {
 }
 
 void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s) {
-	I2S2BufCtl.nError++;
+	if (hi2s == &hi2s2) {
+		I2S2BufCtl.nError++;
+	} else if (hi2s == &hi2s3) {
+			I2S3BufCtl.nRecv++;
+	} else {
+		PUTZ_ASSERT(false);
+	}
 }
 
 bool Putz01I2S2Proc (void) {
@@ -208,4 +222,71 @@ bool Putz01I2S3Proc (void) {
 	return true;
 }
 
+I2sBufCtl_t SaiABufCtl;
+I2sData_t SaiABuf[SAIABUFSZ];
+bool Putz01SaiAStart (void) {
+	puts ("Putz01SaiAStart() Enter\r");
+	HAL_StatusTypeDef sts = HAL_SAI_Receive_DMA(&hsai_BlockA1, (uint8_t *)&SaiABuf, sizeof(SaiABuf));
+	PUTZ_ASSERT(sts==HAL_OK);
+	return true;
+}
+
+bool Putz01SaiAProc (void) {
+	char strbuf[32];
+	if (SaiABufCtl.nRecvProc != SaiABufCtl.nRecv) {
+		if (SaiABufCtl.nErrorProc != SaiABufCtl.nError) {
+				SaiABufCtl.nErrorProc++;
+		}
+		if (!(SaiABufCtl.nRecvProc & 0x000e)) {
+			if (SaiABufCtl.nRecvProc & 1) {
+				sprintf (strbuf, "SaiA Rx%06d.5 Er%d ", SaiABufCtl.nRecvProc/2, SaiABufCtl.nErrorProc);
+				DumpFWds ((uint32_t*)&SaiABuf[SAIBBUFSZ/2],8,strbuf);
+			} else {
+				sprintf (strbuf, "SaiA Rx%06d.0 Er%d ", SaiABufCtl.nRecvProc/2, SaiABufCtl.nErrorProc);
+				DumpFWds ((uint32_t*)&SaiABuf[0],8,strbuf);
+			}
+		}
+		SaiABufCtl.nRecvProc++;
+	} else if (SaiABufCtl.nErrorProc != SaiABufCtl.nError) {
+		SaiABufCtl.nErrorProc++;
+		printf ("SaiA Er%04d\r\n", SaiABufCtl.nErrorProc);
+	}
+	return true;
+}
+
+I2sBufCtl_t SaiBBufCtl;
+I2sData_t SaiBBuf[SAIBBUFSZ];
+bool Putz01SaiBStart (void) {
+	puts ("Putz01SaiBStart() Enter\r");
+	HAL_StatusTypeDef sts = HAL_SAI_Receive_DMA(&hsai_BlockB1, (uint8_t *)&SaiBBuf, sizeof(SaiBBuf));
+	PUTZ_ASSERT(sts==HAL_OK);
+	return true;
+}
+
+bool Putz01SaiBProc (void) {
+	return true;
+}
+
+void HAL_SAI_RxHalfCpltCallback(SAI_HandleTypeDef *hsai) {
+	HAL_SAI_RxCpltCallback(hsai);
+}
+void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai) {
+	if (hsai == &hsai_BlockA1) {
+		SaiABufCtl.nRecv++;
+	} else if (hsai == &hsai_BlockB1) {
+			SaiBBufCtl.nRecv++;
+	} else {
+		PUTZ_ASSERT(false);
+	}
+}
+
+void HAL_SAI_ErrorCallback(SAI_HandleTypeDef *hsai) {
+	if (hsai == &hsai_BlockA1) {
+		I2S2BufCtl.nError++;
+	} else if (hsai == &hsai_BlockB1) {
+			I2S3BufCtl.nRecv++;
+	} else {
+		PUTZ_ASSERT(false);
+	}
+}
 

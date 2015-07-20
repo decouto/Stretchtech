@@ -1,5 +1,5 @@
 #####################################################
-# Date:        Sunday, 19/July/'15
+# Date:        Monday, 20/July/'15
 # Interface:   Simulation (NONE)
 # Product:     STA321MP DK
 # Description: <none>
@@ -23,7 +23,7 @@ Reg[0Ch] = 2Eh ## Channel 2 Volume
 Reg[0Dh] = 34h ## Channel 3 Volume
 Reg[0Eh] = 34h ## Channel 4 Volume
 Reg[0Fh] = 48h ## Channel 5 Volume
-Reg[10h] = 60h ## Channel 6 Volume
+Reg[10h] = 47h ## Channel 6 Volume
 Reg[11h] = 60h ## Channel 7 Volume
 Reg[12h] = 60h ## Channel 8 Volume
 Reg[13h] = 10h ## Channel 1 Mute, VolBP, Trim
