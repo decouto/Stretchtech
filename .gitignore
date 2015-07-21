@@ -47,7 +47,6 @@ Temporary Items
 *.lnp
 *.dep
 *.log
-*.ioc
 *.bak
 *.TMP
 
