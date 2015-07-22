@@ -2,6 +2,10 @@
 //
 #include "Putz01.h"
 
+//#define ENABLE_SYNCWS
+//#define ENABLE_DUMP
+#define PROC_ALLBUFS 1
+
 extern "C" {
 #include "Board_Buttons.h"
 #include "Board_LED.h"
@@ -17,6 +21,16 @@ void Putz01Assert(uint8_t* file, uint32_t line) {
 	while(1);
 }
 
+#define SWAPHWDS(x)	((((x)&0x0000ffff)<<16)|(((x)&0xffff0000)>>16))
+uint32_t CmpI2sBufToSaiBuf(uint32_t *pI2s, uint32_t *pSai, uint32_t len) {
+	uint32_t i;
+	for (i = 0; i < len; i++)
+		if (SWAPHWDS(pI2s[i]) != pSai[i])
+			break;
+	return i;
+}
+#undef SWAPHWDS
+
 void DumpHWds (uint16_t *p, uint16_t len, const char *note) {
 	if (note) printf (note);
 	for (uint16_t i = 0; i != len; i++) {
@@ -27,14 +41,15 @@ void DumpHWds (uint16_t *p, uint16_t len, const char *note) {
 }
 
 #define SWAPHWDS(x)	((((x)&0x0000ffff)<<16)|(((x)&0xffff0000)>>16))
-void DumpFWds (uint32_t *p, uint16_t len, const char *note) {
+void DumpFWds (uint32_t *p, uint16_t len, bool bSwap, const char *note) {
 	if (note) printf (note);
 	for (uint16_t i = 0; i != len; i++) {
 		if (i && !(i & 15)) puts ("\r");
-		printf ("%08x ", SWAPHWDS(p[i])); 
+		printf ("%08x ", bSwap ? SWAPHWDS(p[i]) : p[i]); 
 	}
 	if (len) puts ("\r");
 }
+#undef SWAPHWDS
 
 
 
@@ -60,16 +75,70 @@ int stdin_getchar(void) {
 
 void stdout_putchar(int c) {
 	HAL_StatusTypeDef st = HAL_UART_Transmit(&huart3, (uint8_t*)&c, 1, HAL_MAX_DELAY);
-	while (st != HAL_OK);
+	PUTZ_ASSERT (st == HAL_OK);
 }
 
 #endif
 
+#define WAITLIM	(1<<18)
+bool IfBitWiggles(uint32_t* pPortIdr, uint8_t bitPos, char* name) {
+	// Wait for bit high condition
+	for (int i = 0; (*pPortIdr & (1<<bitPos)); i++) {
+		if (++i > WAITLIM) goto quiet;
+	}
+	// Wait for bit low condition
+	for (int i = 0; !(*pPortIdr & (1<<bitPos)); i++) {
+		if (++i > WAITLIM) goto quiet;
+	}
+	// Wait for bit high condition
+	for (int i = 0; (*pPortIdr & (1<<bitPos)); i++) {
+		if (++i > WAITLIM) goto quiet;
+	}
+	printf ("%s is OK\r\n", name);
+	return true;
+quiet:
+	printf ("%s is SILENT\r\n", name);
+	return false;
+}
+
+#define SAI_SCK_A	PORTE_IDR,5
+#define SAI_FS_A	PORTE_IDR,4
+#define SAI_SD_A	PORTE_IDR,6
+#define SAI_SD_B	PORTE_IDR,3
+#define I2S_2_CK	PORTB_IDR,10
+#define I2S_2_WS	PORTB_IDR,12
+#define I2S_2_SD	PORTC_IDR,3
+#define I2S_3_CK	PORTC_IDR,10
+#define I2S_3_WS	PORTA_IDR,4
+#define I2S_3_SD	PORTC_IDR,12
+
+bool CheckSignalsForLife() {
+	bool b = true;
+	
+	puts ("Checking I2S2 signals...\r");
+	if (IfBitWiggles(I2S_2_CK," I2S_2_CK")) b = 0;
+	if (IfBitWiggles(I2S_2_WS," I2S_2_WS")) b = 0;
+	if (IfBitWiggles(I2S_2_SD," I2S_2_SD")) b = 0;
+	
+	puts ("Checking I2S3 signals...\r");
+	if (IfBitWiggles(I2S_3_CK," I2S_3_CK")) b = 0;
+	if (IfBitWiggles(I2S_3_WS," I2S_3_WS")) b = 0;
+	if (IfBitWiggles(I2S_2_SD," I2S_2_SD")) b = 0;
+
+	puts ("Checking SAI signals...\r");
+	if (IfBitWiggles(SAI_SCK_A," SAI_SCK_A")) b = 0;
+	if (IfBitWiggles(SAI_FS_A," SAI_FS_A")) b = 0;
+	if (IfBitWiggles(SAI_SD_A," SAI_SD_A")) b = 0;
+	if (IfBitWiggles(SAI_SD_B," SAI_SD_B")) b = 0;
+	
+	return b;
+}
 
 bool Putz01Init (void) {
 	puts ("\r\n\nPutz01Init() Enter\r");
 	Buttons_Initialize();
 	LED_Initialize();
+	CheckSignalsForLife();
 	puts ("Putz01Init() Leave\r");
 	return true;
 }
@@ -85,9 +154,9 @@ bool Putz01Run(void) {
 	memset(&SaiBBufCtl,0,sizeof(SaiBBufCtl)); 
 	memset(SaiBBuf,0,sizeof(SaiBBuf)); 
 	Putz01I2S2Start();
-	Putz01I2S3Start();
+//	Putz01I2S3Start();
 	Putz01SaiAStart();
-	Putz01SaiBStart();
+//	Putz01SaiBStart();
 	
 	while (1) {
 //		HAL_Delay(1000);
@@ -101,25 +170,28 @@ bool Putz01Run(void) {
 //	return true;
 }
 
+#define EVENT_INTERVAL	500
 bool Putz01HandleButtons (void) {
 	int i = 1;
+	static uint32_t tickEvent = EVENT_INTERVAL;
 	while (Buttons_GetState()) {
 		if (i) puts ("Putz01HandleButtons() Looping\r");
 		i = 0;
 	}
-	{ static bool onOff = false;
+	if (HAL_GetTick() > tickEvent) {
+		static bool onOff = false;
 		LED_SetOut(onOff ? 2 : 1);
 		onOff = !onOff;
+		tickEvent = HAL_GetTick() + EVENT_INTERVAL;
 	}
 	return true;
 }
 
-#define PORTA_IDR	0x40020010
-#define PORTB_IDR	0x40020410
 #define PA04I (*((uint32_t*)PORTA_IDR)&(1<<04))
 #define PB12I (*((uint32_t*)PORTB_IDR)&(1<<12))
 #define BVAL 0
 void WaitForI2sWs(I2S_HandleTypeDef *h) {
+#ifdef ENABLE_SYNCWS
 	int bHigh = BVAL;
 	if (h == &hi2s2) {
 		printf ("WaitForIs2Ws (PB12) transition to %s\r\n", bHigh ? "HIGH" : "LOW");
@@ -134,13 +206,17 @@ void WaitForI2sWs(I2S_HandleTypeDef *h) {
 	} else {
 		PUTZ_ASSERT(false);
 	}
+#endif //ENABLE_SYNCWS
 }
+#undef PA04I
+#undef PB12I
+#undef BVAL
 
 I2sBufCtl_t I2S2BufCtl;
 I2sData_t I2S2Buf[I2S2BUFSZ];
 bool Putz01I2S2Start (void) {
 	puts ("Putz01I2S2Start() Enter\r");
-	HAL_StatusTypeDef sts = HAL_I2S_Receive_DMA(&hi2s2, (uint16_t*)I2S2Buf, I2S2BUFSZ*sizeof(I2sData_t)/sizeof(uint16_t));
+	HAL_StatusTypeDef sts = HAL_I2S_Receive_DMA(&hi2s2, (uint16_t*)I2S2Buf, sizeof(I2S2Buf)/sizeof(I2S2Buf[0]));//I2S2BUFSZ*sizeof(I2sData_t)/sizeof(uint16_t));
 	PUTZ_ASSERT(sts==HAL_OK);
 	return true;
 }
@@ -174,13 +250,17 @@ bool Putz01I2S2Proc (void) {
 		if (I2S2BufCtl.nErrorProc != I2S2BufCtl.nError) {
 				I2S2BufCtl.nErrorProc++;
 		}
-		if (!(I2S2BufCtl.nRecvProc & 0x000e)) {
+		if (PROC_ALLBUFS || !(I2S2BufCtl.nRecvProc & 0x000e)) {
 			if (I2S2BufCtl.nRecvProc & 1) {
+				#ifdef ENABLE_DUMP
 				sprintf (strbuf, "I2S2 Rx%06d.5 Er%d ", I2S2BufCtl.nRecvProc/2, I2S2BufCtl.nErrorProc);
-				DumpFWds ((uint32_t*)&I2S2Buf[I2S2BUFSZ/2],8,strbuf);
+				DumpFWds ((uint32_t*)&I2S2Buf[I2S2BUFSZ/2],4,true,strbuf);
+				#endif //ENABLE_DUMP 
 			} else {
+				#ifdef ENABLE_DUMP
 				sprintf (strbuf, "I2S2 Rx%06d.0 Er%d ", I2S2BufCtl.nRecvProc/2, I2S2BufCtl.nErrorProc);
-				DumpFWds ((uint32_t*)&I2S2Buf[0],8,strbuf);
+				DumpFWds ((uint32_t*)&I2S2Buf[0],4,true,strbuf);
+				#endif //ENABLE_DUMP 
 			}
 		}
 		I2S2BufCtl.nRecvProc++;
@@ -195,7 +275,7 @@ I2sBufCtl_t I2S3BufCtl;
 I2sData_t I2S3Buf[I2S3BUFSZ];
 bool Putz01I2S3Start (void) {
 	puts ("Putz01I2S3Start() Enter\r");
-	HAL_StatusTypeDef sts = HAL_I2S_Receive_DMA(&hi2s3, (uint16_t*)I2S3Buf, I2S3BUFSZ*sizeof(I2sData_t)/sizeof(uint16_t));
+	HAL_StatusTypeDef sts = HAL_I2S_Receive_DMA(&hi2s3, (uint16_t*)I2S3Buf, sizeof(I2S3Buf)/sizeof(I2S3Buf[0]));//I2S3BUFSZ*sizeof(I2sData_t)/sizeof(uint16_t));
 	PUTZ_ASSERT(sts==HAL_OK);
 	return true;
 }
@@ -205,13 +285,17 @@ bool Putz01I2S3Proc (void) {
 		if (I2S3BufCtl.nErrorProc != I2S3BufCtl.nError) {
 				I2S3BufCtl.nErrorProc++;
 		}
-		if (!(I2S3BufCtl.nRecvProc & 0x000e)) {
+		if (PROC_ALLBUFS || !(I2S3BufCtl.nRecvProc & 0x000e)) {
 			if (I2S3BufCtl.nRecvProc & 1) {
+				#ifdef ENABLE_DUMP
 				sprintf (strbuf, "I2S3 Rx%06d.5 Er%d ", I2S3BufCtl.nRecvProc/2, I2S3BufCtl.nErrorProc);
-				DumpFWds ((uint32_t*)&I2S3Buf[I2S3BUFSZ/2],8,strbuf);
+				DumpFWds ((uint32_t*)&I2S3Buf[I2S3BUFSZ/2],8,true,strbuf);
+				#endif //ENABLE_DUMP 
 			} else {
+				#ifdef ENABLE_DUMP
 				sprintf (strbuf, "I2S3 Rx%06d.0 Er%d ", I2S3BufCtl.nRecvProc/2, I2S3BufCtl.nErrorProc);
-				DumpFWds ((uint32_t*)&I2S3Buf[0],8,strbuf);
+				DumpFWds ((uint32_t*)&I2S3Buf[0],8,true,strbuf);
+				#endif //ENABLE_DUMP 
 			}
 		}
 		I2S3BufCtl.nRecvProc++;
@@ -222,28 +306,61 @@ bool Putz01I2S3Proc (void) {
 	return true;
 }
 
+#define PE04 ((*PORTE_IDR)&(1<<04))
+#define BVAL 0
+void WaitForSaiFs(SAI_HandleTypeDef *h) {
+#ifdef ENABLE_SYNCWS
+	int bHigh = BVAL;
+	printf ("WaitForSaiFs (PE04) transition to %s\r\n", bHigh ? "HIGH" : "LOW");
+	while (!PE04);						// Wait while low
+	while (PE04);							// Wait while high
+	if (bHigh) while (!PE04);	// Wait while low
+#endif //ENABLE_SYNCWS
+}
+#undef PE04
+#undef BVAL
+
+
+
 I2sBufCtl_t SaiABufCtl;
 I2sData_t SaiABuf[SAIABUFSZ];
 bool Putz01SaiAStart (void) {
 	puts ("Putz01SaiAStart() Enter\r");
-	HAL_StatusTypeDef sts = HAL_SAI_Receive_DMA(&hsai_BlockA1, (uint8_t *)&SaiABuf, sizeof(SaiABuf));
+	HAL_StatusTypeDef sts = HAL_SAI_Receive_DMA(&hsai_BlockA1, (uint8_t *)&SaiABuf, sizeof(SaiABuf)/sizeof(SaiABuf[0]));
 	PUTZ_ASSERT(sts==HAL_OK);
 	return true;
 }
 
+#define CMPLEN	(SAIABUFSZ/2)
 bool Putz01SaiAProc (void) {
 	char strbuf[32];
 	if (SaiABufCtl.nRecvProc != SaiABufCtl.nRecv) {
 		if (SaiABufCtl.nErrorProc != SaiABufCtl.nError) {
 				SaiABufCtl.nErrorProc++;
 		}
-		if (!(SaiABufCtl.nRecvProc & 0x000e)) {
+		if (PROC_ALLBUFS || !(SaiABufCtl.nRecvProc & 0x000e)) {
 			if (SaiABufCtl.nRecvProc & 1) {
+				#ifdef ENABLE_DUMP
 				sprintf (strbuf, "SaiA Rx%06d.5 Er%d ", SaiABufCtl.nRecvProc/2, SaiABufCtl.nErrorProc);
-				DumpFWds ((uint32_t*)&SaiABuf[SAIBBUFSZ/2],8,strbuf);
+				DumpFWds ((uint32_t*)&SaiABuf[SAIABUFSZ/2],4,false,strbuf);
+				#endif //ENABLE_DUMP
+				uint32_t ix = CmpI2sBufToSaiBuf((uint32_t*)&I2S2Buf[I2S2BUFSZ/2], (uint32_t*)&SaiABuf[SAIABUFSZ/2], CMPLEN);
+//				printf ("CmpI2sBufToSaiBuf returned %d\r\n", ix);
+				if (ix != CMPLEN) {
+					printf ("CmpI2sBufToSaiBuf returned %d\r\n", ix);
+					PUTZ_ASSERT(ix == SAIABUFSZ);
+				}
 			} else {
+				#ifdef ENABLE_DUMP
 				sprintf (strbuf, "SaiA Rx%06d.0 Er%d ", SaiABufCtl.nRecvProc/2, SaiABufCtl.nErrorProc);
-				DumpFWds ((uint32_t*)&SaiABuf[0],8,strbuf);
+				DumpFWds ((uint32_t*)&SaiABuf[0],4,false,strbuf);
+				#endif //ENABLE_DUMP
+				uint32_t ix = CmpI2sBufToSaiBuf((uint32_t*)I2S2Buf, (uint32_t*)SaiABuf, CMPLEN);
+//				printf ("CmpI2sBufToSaiBuf returned %d\r\n", ix);
+				if (ix != CMPLEN) {
+					printf ("CmpI2sBufToSaiBuf returned %d\r\n", ix);
+					PUTZ_ASSERT(ix == SAIABUFSZ);
+				}
 			}
 		}
 		SaiABufCtl.nRecvProc++;
@@ -253,12 +370,13 @@ bool Putz01SaiAProc (void) {
 	}
 	return true;
 }
+#undef CMPLEN
 
 I2sBufCtl_t SaiBBufCtl;
 I2sData_t SaiBBuf[SAIBBUFSZ];
 bool Putz01SaiBStart (void) {
 	puts ("Putz01SaiBStart() Enter\r");
-	HAL_StatusTypeDef sts = HAL_SAI_Receive_DMA(&hsai_BlockB1, (uint8_t *)&SaiBBuf, sizeof(SaiBBuf));
+	HAL_StatusTypeDef sts = HAL_SAI_Receive_DMA(&hsai_BlockB1, (uint8_t *)&SaiBBuf, sizeof(SaiBBuf)/sizeof(SaiBBuf[0]));
 	PUTZ_ASSERT(sts==HAL_OK);
 	return true;
 }
@@ -282,11 +400,10 @@ void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai) {
 
 void HAL_SAI_ErrorCallback(SAI_HandleTypeDef *hsai) {
 	if (hsai == &hsai_BlockA1) {
-		I2S2BufCtl.nError++;
+		SaiABufCtl.nError++;
 	} else if (hsai == &hsai_BlockB1) {
-			I2S3BufCtl.nRecv++;
+			SaiABufCtl.nRecv++;
 	} else {
 		PUTZ_ASSERT(false);
 	}
 }
-

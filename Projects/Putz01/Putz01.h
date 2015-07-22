@@ -13,9 +13,16 @@
 #define PUTZ_ASSERT(x)	if(!(x))Putz01Assert((uint8_t *)__FILE__, __LINE__)
 
 #define I2S2BUFSZ	4096
-#define I2S3BUFSZ	4096
+#define I2S3BUFSZ	2048
 #define SAIABUFSZ	4096
-#define SAIBBUFSZ	4096
+#define SAIBBUFSZ	2048
+
+#define PORTA_IDR	((uint32_t*)0x40020010)
+#define PORTB_IDR	((uint32_t*)0x40020410)
+#define PORTC_IDR	((uint32_t*)0x40020810)
+#define PORTD_IDR	((uint32_t*)0x40020C10)
+#define PORTE_IDR	((uint32_t*)0x40021010)
+
 
 typedef int32_t I2sData_t;
 
@@ -45,7 +52,8 @@ bool Putz01SaiBStart (void);
 void Putz01Assert(uint8_t* file, uint32_t line);
 int stdin_getchar(void);
 void stdout_putchar(int c);
-void WaitForI2sWs(I2S_HandleTypeDef *h);
+extern void WaitForI2sWs(I2S_HandleTypeDef *h);
+extern void WaitForSaiFs(SAI_HandleTypeDef *h);
 extern void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s);
 extern void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s);
 extern void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s);
