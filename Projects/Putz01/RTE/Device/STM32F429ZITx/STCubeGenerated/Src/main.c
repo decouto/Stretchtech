@@ -243,7 +243,7 @@ void MX_SAI1_Init(void)
   hsai_BlockA1.FrameInit.FrameLength = 64;
   hsai_BlockA1.FrameInit.ActiveFrameLength = 32;
   hsai_BlockA1.FrameInit.FSDefinition = SAI_FS_CHANNEL_IDENTIFICATION;
-  hsai_BlockA1.FrameInit.FSPolarity = SAI_FS_ACTIVE_HIGH;//SAI_FS_ACTIVE_LOW;
+  hsai_BlockA1.FrameInit.FSPolarity = SAI_FS_ACTIVE_LOW;
   hsai_BlockA1.FrameInit.FSOffset = SAI_FS_FIRSTBIT;
   hsai_BlockA1.SlotInit.FirstBitOffset = 0;
   hsai_BlockA1.SlotInit.SlotSize = SAI_SLOTSIZE_32B;
@@ -263,7 +263,7 @@ void MX_SAI1_Init(void)
   hsai_BlockB1.FrameInit.FrameLength = 64;
   hsai_BlockB1.FrameInit.ActiveFrameLength = 32;
   hsai_BlockB1.FrameInit.FSDefinition = SAI_FS_CHANNEL_IDENTIFICATION;
-  hsai_BlockB1.FrameInit.FSPolarity = SAI_FS_ACTIVE_HIGH;//SAI_FS_ACTIVE_LOW;
+  hsai_BlockB1.FrameInit.FSPolarity = SAI_FS_ACTIVE_LOW;
   hsai_BlockB1.FrameInit.FSOffset = SAI_FS_FIRSTBIT;
   hsai_BlockB1.SlotInit.FirstBitOffset = 0;
   hsai_BlockB1.SlotInit.SlotSize = SAI_SLOTSIZE_32B;

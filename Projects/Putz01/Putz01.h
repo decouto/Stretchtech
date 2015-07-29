@@ -13,9 +13,9 @@
 #define PUTZ_ASSERT(x)	if(!(x))Putz01Assert((uint8_t *)__FILE__, __LINE__)
 
 #define I2S2BUFSZ	4096
-#define I2S3BUFSZ	2048
+#define I2S3BUFSZ	4096
 #define SAIABUFSZ	4096
-#define SAIBBUFSZ	2048
+#define SAIBBUFSZ	4096
 
 #define PORTA_IDR	((uint32_t*)0x40020010)
 #define PORTB_IDR	((uint32_t*)0x40020410)

@@ -2,9 +2,12 @@
 //
 #include "Putz01.h"
 
-//#define ENABLE_SYNCWS
-//#define ENABLE_DUMP
-#define PROC_ALLBUFS 1
+#define ENABLE_SYNCWS 0
+#define ENABLE_DUMP	1
+#define PROC_ALLBUFS 0
+#define CMP_S2I2_SAIA	0
+#define CMP_S2I2_SAIB 0
+#define CMPLEN I2S2BUFSZ
 
 extern "C" {
 #include "Board_Buttons.h"
@@ -155,8 +158,8 @@ bool Putz01Run(void) {
 	memset(SaiBBuf,0,sizeof(SaiBBuf)); 
 	Putz01I2S2Start();
 //	Putz01I2S3Start();
-	Putz01SaiAStart();
-//	Putz01SaiBStart();
+//	Putz01SaiAStart();
+	Putz01SaiBStart();
 	
 	while (1) {
 //		HAL_Delay(1000);
@@ -191,7 +194,7 @@ bool Putz01HandleButtons (void) {
 #define PB12I (*((uint32_t*)PORTB_IDR)&(1<<12))
 #define BVAL 0
 void WaitForI2sWs(I2S_HandleTypeDef *h) {
-#ifdef ENABLE_SYNCWS
+#if ENABLE_SYNCWS
 	int bHigh = BVAL;
 	if (h == &hi2s2) {
 		printf ("WaitForIs2Ws (PB12) transition to %s\r\n", bHigh ? "HIGH" : "LOW");
@@ -245,19 +248,20 @@ void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s) {
 }
 
 bool Putz01I2S2Proc (void) {
-	char strbuf[32];
 	if (I2S2BufCtl.nRecvProc != I2S2BufCtl.nRecv) {
 		if (I2S2BufCtl.nErrorProc != I2S2BufCtl.nError) {
 				I2S2BufCtl.nErrorProc++;
 		}
 		if (PROC_ALLBUFS || !(I2S2BufCtl.nRecvProc & 0x000e)) {
 			if (I2S2BufCtl.nRecvProc & 1) {
-				#ifdef ENABLE_DUMP
+				#if ENABLE_DUMP
+				char strbuf[32];
 				sprintf (strbuf, "I2S2 Rx%06d.5 Er%d ", I2S2BufCtl.nRecvProc/2, I2S2BufCtl.nErrorProc);
 				DumpFWds ((uint32_t*)&I2S2Buf[I2S2BUFSZ/2],4,true,strbuf);
 				#endif //ENABLE_DUMP 
 			} else {
-				#ifdef ENABLE_DUMP
+				#if ENABLE_DUMP
+				char strbuf[32];
 				sprintf (strbuf, "I2S2 Rx%06d.0 Er%d ", I2S2BufCtl.nRecvProc/2, I2S2BufCtl.nErrorProc);
 				DumpFWds ((uint32_t*)&I2S2Buf[0],4,true,strbuf);
 				#endif //ENABLE_DUMP 
@@ -280,19 +284,20 @@ bool Putz01I2S3Start (void) {
 	return true;
 }
 bool Putz01I2S3Proc (void) {
-	char strbuf[32];
 	if (I2S3BufCtl.nRecvProc != I2S3BufCtl.nRecv) {
 		if (I2S3BufCtl.nErrorProc != I2S3BufCtl.nError) {
 				I2S3BufCtl.nErrorProc++;
 		}
 		if (PROC_ALLBUFS || !(I2S3BufCtl.nRecvProc & 0x000e)) {
 			if (I2S3BufCtl.nRecvProc & 1) {
-				#ifdef ENABLE_DUMP
+				#if ENABLE_DUMP
+				char strbuf[32];
 				sprintf (strbuf, "I2S3 Rx%06d.5 Er%d ", I2S3BufCtl.nRecvProc/2, I2S3BufCtl.nErrorProc);
 				DumpFWds ((uint32_t*)&I2S3Buf[I2S3BUFSZ/2],8,true,strbuf);
 				#endif //ENABLE_DUMP 
 			} else {
-				#ifdef ENABLE_DUMP
+				#if ENABLE_DUMP
+				char strbuf[32];
 				sprintf (strbuf, "I2S3 Rx%06d.0 Er%d ", I2S3BufCtl.nRecvProc/2, I2S3BufCtl.nErrorProc);
 				DumpFWds ((uint32_t*)&I2S3Buf[0],8,true,strbuf);
 				#endif //ENABLE_DUMP 
@@ -309,7 +314,7 @@ bool Putz01I2S3Proc (void) {
 #define PE04 ((*PORTE_IDR)&(1<<04))
 #define BVAL 0
 void WaitForSaiFs(SAI_HandleTypeDef *h) {
-#ifdef ENABLE_SYNCWS
+#if ENABLE_SYNCWS
 	int bHigh = BVAL;
 	printf ("WaitForSaiFs (PE04) transition to %s\r\n", bHigh ? "HIGH" : "LOW");
 	while (!PE04);						// Wait while low
@@ -331,36 +336,40 @@ bool Putz01SaiAStart (void) {
 	return true;
 }
 
-#define CMPLEN	(SAIABUFSZ/2)
 bool Putz01SaiAProc (void) {
-	char strbuf[32];
 	if (SaiABufCtl.nRecvProc != SaiABufCtl.nRecv) {
 		if (SaiABufCtl.nErrorProc != SaiABufCtl.nError) {
 				SaiABufCtl.nErrorProc++;
 		}
 		if (PROC_ALLBUFS || !(SaiABufCtl.nRecvProc & 0x000e)) {
 			if (SaiABufCtl.nRecvProc & 1) {
-				#ifdef ENABLE_DUMP
+				#if ENABLE_DUMP
+				char strbuf[32];
 				sprintf (strbuf, "SaiA Rx%06d.5 Er%d ", SaiABufCtl.nRecvProc/2, SaiABufCtl.nErrorProc);
 				DumpFWds ((uint32_t*)&SaiABuf[SAIABUFSZ/2],4,false,strbuf);
 				#endif //ENABLE_DUMP
+				#if CMP_S2I2_SAIA
 				uint32_t ix = CmpI2sBufToSaiBuf((uint32_t*)&I2S2Buf[I2S2BUFSZ/2], (uint32_t*)&SaiABuf[SAIABUFSZ/2], CMPLEN);
 //				printf ("CmpI2sBufToSaiBuf returned %d\r\n", ix);
 				if (ix != CMPLEN) {
-					printf ("CmpI2sBufToSaiBuf returned %d\r\n", ix);
-					PUTZ_ASSERT(ix == SAIABUFSZ);
+					printf ("CmpI2sBufToSaiBuf returned %d processing SaiA Rx%06d\r\n", ix, SaiABufCtl.nRecvProc/2);
+					PUTZ_ASSERT(ix == CMPLEN);
 				}
+				#endif //CMP_S2I2_SAIA
 			} else {
-				#ifdef ENABLE_DUMP
+				#if ENABLE_DUMP
+				char strbuf[32];
 				sprintf (strbuf, "SaiA Rx%06d.0 Er%d ", SaiABufCtl.nRecvProc/2, SaiABufCtl.nErrorProc);
 				DumpFWds ((uint32_t*)&SaiABuf[0],4,false,strbuf);
 				#endif //ENABLE_DUMP
+				#if CMP_S2I2_SAIA
 				uint32_t ix = CmpI2sBufToSaiBuf((uint32_t*)I2S2Buf, (uint32_t*)SaiABuf, CMPLEN);
 //				printf ("CmpI2sBufToSaiBuf returned %d\r\n", ix);
 				if (ix != CMPLEN) {
-					printf ("CmpI2sBufToSaiBuf returned %d\r\n", ix);
-					PUTZ_ASSERT(ix == SAIABUFSZ);
+					printf ("CmpI2sBufToSaiBuf returned %d processing SaiA Rx%06d\r\n", ix, SaiABufCtl.nRecvProc/2);
+					PUTZ_ASSERT(ix == CMPLEN);
 				}
+				#endif //CMP_S2I2_SAIA
 			}
 		}
 		SaiABufCtl.nRecvProc++;
@@ -370,7 +379,6 @@ bool Putz01SaiAProc (void) {
 	}
 	return true;
 }
-#undef CMPLEN
 
 I2sBufCtl_t SaiBBufCtl;
 I2sData_t SaiBBuf[SAIBBUFSZ];
@@ -382,6 +390,46 @@ bool Putz01SaiBStart (void) {
 }
 
 bool Putz01SaiBProc (void) {
+	if (SaiBBufCtl.nRecvProc != SaiBBufCtl.nRecv) {
+		if (SaiBBufCtl.nErrorProc != SaiBBufCtl.nError) {
+				SaiBBufCtl.nErrorProc++;
+		}
+		if (PROC_ALLBUFS || !(SaiBBufCtl.nRecvProc & 0x000e)) {
+			if (SaiBBufCtl.nRecvProc & 1) {
+				#if ENABLE_DUMP
+				char strbuf[32];
+				sprintf (strbuf, "SaiB Rx%06d.5 Er%d ", SaiBBufCtl.nRecvProc/2, SaiBBufCtl.nErrorProc);
+				DumpFWds ((uint32_t*)&SaiBBuf[SAIBBUFSZ/2],4,false,strbuf);
+				#endif //ENABLE_DUMP
+				#if CMP_S2I2_SAIB
+				uint32_t ix = CmpI2sBufToSaiBuf((uint32_t*)&I2S2Buf[I2S2BUFSZ/2], (uint32_t*)&SaiBBuf[SAIBBUFSZ/2], CMPLEN);
+//				printf ("CmpI2sBufToSaiBuf returned %d\r\n", ix);
+				if (ix != CMPLEN) {
+					printf ("CmpI2sBufToSaiBuf returned %d processing SaiB Rx%06d\r\n", ix, SaiBBufCtl.nRecvProc/2);
+					PUTZ_ASSERT(ix == CMPLEN);
+				}
+				#endif //CMP_S2I2_SAIB
+			} else {
+				#if ENABLE_DUMP
+				char strbuf[32];
+				sprintf (strbuf, "SaiB Rx%06d.0 Er%d ", SaiBBufCtl.nRecvProc/2, SaiBBufCtl.nErrorProc);
+				DumpFWds ((uint32_t*)&SaiBBuf[0],4,false,strbuf);
+				#endif //ENABLE_DUMP
+				#if CMP_S2I2_SAIB
+				uint32_t ix = CmpI2sBufToSaiBuf((uint32_t*)I2S2Buf, (uint32_t*)SaiBBuf, CMPLEN);
+//				printf ("CmpI2sBufToSaiBuf returned %d\r\n", ix);
+				if (ix != CMPLEN) {
+					printf ("CmpI2sBufToSaiBuf returned %d processing SaiB Rx%06d\r\n", ix, SaiBBufCtl.nRecvProc/2);
+					PUTZ_ASSERT(ix == CMPLEN);
+				}
+				#endif //CMP_S2I2_SAIB
+				}
+		}
+		SaiBBufCtl.nRecvProc++;
+	} else if (SaiBBufCtl.nErrorProc != SaiBBufCtl.nError) {
+		SaiBBufCtl.nErrorProc++;
+		printf ("SaiB Er%04d\r\n", SaiBBufCtl.nErrorProc);
+	}
 	return true;
 }
 
@@ -392,7 +440,7 @@ void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai) {
 	if (hsai == &hsai_BlockA1) {
 		SaiABufCtl.nRecv++;
 	} else if (hsai == &hsai_BlockB1) {
-			SaiBBufCtl.nRecv++;
+		SaiBBufCtl.nRecv++;
 	} else {
 		PUTZ_ASSERT(false);
 	}
@@ -402,7 +450,7 @@ void HAL_SAI_ErrorCallback(SAI_HandleTypeDef *hsai) {
 	if (hsai == &hsai_BlockA1) {
 		SaiABufCtl.nError++;
 	} else if (hsai == &hsai_BlockB1) {
-			SaiABufCtl.nRecv++;
+		SaiBBufCtl.nError++;
 	} else {
 		PUTZ_ASSERT(false);
 	}
