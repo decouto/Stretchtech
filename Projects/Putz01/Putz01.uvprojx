@@ -479,6 +479,31 @@
               <FileType>8</FileType>
               <FilePath>.\Putz01.cpp</FilePath>
             </File>
+            <File>
+              <FileName>ApControl.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>.\ApControl.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>ApInfoTxt.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>.\ApInfoTxt.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>ApControl.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\ApControl.h</FilePath>
+            </File>
+            <File>
+              <FileName>ApWbHelpTxt.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\ApWbHelpTxt.h</FilePath>
+            </File>
+            <File>
+              <FileName>ApWbProj03.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\ApWbProj03.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

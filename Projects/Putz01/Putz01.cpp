@@ -1,6 +1,7 @@
 // Putz01.cpp -- application module definition
 //
 #include "Putz01.h"
+#include "ApControl.h"
 
 #define ENABLE_SYNCWS 0
 #define ENABLE_DUMP	1
@@ -42,6 +43,16 @@ void DumpHWds (uint16_t *p, uint16_t len, const char *note) {
 	}
 	if (len) puts ("\r");
 }
+
+void DumpBytes (uint8_t *p, uint16_t len, const char *note) {
+	if (note) printf (note);
+	for (uint16_t i = 0; i != len; i++) {
+		if (i && !(i & 15)) puts ("\r");
+		printf ("%02x ", p[i]); 
+	}
+	if (len) puts ("\r");
+}
+
 
 #define SWAPHWDS(x)	((((x)&0x0000ffff)<<16)|(((x)&0xffff0000)>>16))
 void DumpFWds (uint32_t *p, uint16_t len, bool bSwap, const char *note) {
@@ -118,6 +129,7 @@ quiet:
 bool CheckSignalsForLife() {
 	bool b = true;
 	
+#if USING_I2S
 	puts ("Checking I2S2 signals...\r");
 	if (IfBitWiggles(I2S_2_CK," I2S_2_CK")) b = 0;
 	if (IfBitWiggles(I2S_2_WS," I2S_2_WS")) b = 0;
@@ -127,6 +139,7 @@ bool CheckSignalsForLife() {
 	if (IfBitWiggles(I2S_3_CK," I2S_3_CK")) b = 0;
 	if (IfBitWiggles(I2S_3_WS," I2S_3_WS")) b = 0;
 	if (IfBitWiggles(I2S_2_SD," I2S_2_SD")) b = 0;
+#endif //USING_I2S
 
 	puts ("Checking SAI signals...\r");
 	if (IfBitWiggles(SAI_SCK_A," SAI_SCK_A")) b = 0;
@@ -146,27 +159,45 @@ bool Putz01Init (void) {
 	return true;
 }
 
+#if 0
+void DumpApRegs (void) {
+	uint8_t buf[AP_REGFILESZ];
+	memset (buf,0,sizeof(buf));
+//	PUTZ_DEBUG_WAIT();
+	AP_ReadBuffer(0, buf, AP_REGFILESZ);
+	DumpBytes (buf, sizeof(buf), (const char*)"\r\nAudio Processor Registers:\r\n");
+}
+#endif
+
 bool Putz01Run(void) {
 	puts ("Putz01Run() Enter\r");
+#if USING_I2S
 	memset(&I2S2BufCtl,0,sizeof(I2S2BufCtl)); 
 	memset(I2S2Buf,0,sizeof(I2S2Buf)); 
 	memset(&I2S3BufCtl,0,sizeof(I2S3BufCtl)); 
 	memset(I2S3Buf,0,sizeof(I2S3Buf)); 
+#endif //USING_I2S
 	memset(&SaiABufCtl,0,sizeof(SaiABufCtl)); 
 	memset(SaiABuf,0,sizeof(SaiABuf)); 
 	memset(&SaiBBufCtl,0,sizeof(SaiBBufCtl)); 
-	memset(SaiBBuf,0,sizeof(SaiBBuf)); 
+	memset(SaiBBuf,0,sizeof(SaiBBuf));
+	ApDumpParameterFiles();
+	ApInitialize();
+#if USING_I2S
 	Putz01I2S2Start();
 //	Putz01I2S3Start();
 //	Putz01SaiAStart();
+#endif //USING_I2S
 	Putz01SaiBStart();
 	
 	while (1) {
 //		HAL_Delay(1000);
 //		for (int i = 0; i < (1<<20); i++); 
 		Putz01HandleButtons();
+#if USING_I2S
 		Putz01I2S2Proc();
 		Putz01I2S3Proc();
+#endif //USING_I2S
 		Putz01SaiAProc();
 		Putz01SaiBProc();
 	};
@@ -189,6 +220,8 @@ bool Putz01HandleButtons (void) {
 	}
 	return true;
 }
+
+//#if USING_I2S
 
 #define PA04I (*((uint32_t*)PORTA_IDR)&(1<<04))
 #define PB12I (*((uint32_t*)PORTB_IDR)&(1<<12))
@@ -214,6 +247,8 @@ void WaitForI2sWs(I2S_HandleTypeDef *h) {
 #undef PA04I
 #undef PB12I
 #undef BVAL
+
+#if USING_I2S
 
 I2sBufCtl_t I2S2BufCtl;
 I2sData_t I2S2Buf[I2S2BUFSZ];
@@ -310,6 +345,7 @@ bool Putz01I2S3Proc (void) {
 	}
 	return true;
 }
+#endif //USING_I2S
 
 #define PE04 ((*PORTE_IDR)&(1<<04))
 #define BVAL 0
@@ -455,3 +491,70 @@ void HAL_SAI_ErrorCallback(SAI_HandleTypeDef *hsai) {
 		PUTZ_ASSERT(false);
 	}
 }
+
+void AP_WriteBuffer(uint8_t *aTxBuffer, uint8_t TXBUFFERSIZE) 
+{
+    /* -> Start the transmission process */
+    /* While the I2C in reception process, user can transmit data through "aTxBuffer" buffer */
+    while(HAL_I2C_Master_Transmit(&AP_I2C_HANDLE, AP_I2C_ADDR, (uint8_t*)aTxBuffer, (uint16_t)TXBUFFERSIZE, (uint32_t)1000)!= HAL_OK)
+    {
+        /*
+         * Error_Handler() function is called when Timeout error occurs.
+         * When Acknowledge failure occurs (Slave don't acknowledge it's address)
+         * Master restarts communication
+         */
+ 
+        if (HAL_I2C_GetError(&AP_I2C_HANDLE) != HAL_I2C_ERROR_AF)
+        {
+            //DEBUG(3, "In I2C::WriteBuffer -> error");
+            //Error_Handler(3);
+        }
+ 
+    }
+ 
+    /* -> Wait for the end of the transfer */
+    /* Before starting a new communication transfer, you need to check the current
+     * state of the peripheral; if it’s busy you need to wait for the end of current
+     * transfer before starting a new one.
+     * For simplicity reasons, this example is just waiting till the end of the
+     * transfer, but application may perform other tasks while transfer operation
+     * is ongoing.
+     */
+      while (HAL_I2C_GetState(&AP_I2C_HANDLE) != HAL_I2C_STATE_READY)
+      {
+      }
+}
+
+void AP_ReadBuffer(uint8_t RegAddr, uint8_t *aRxBuffer, uint8_t RXBUFFERSIZE)
+{
+    /* -> Lets ask for register's address */
+    AP_WriteBuffer(&RegAddr, 1);
+ 
+    /* -> Put I2C peripheral in reception process */
+    while(HAL_I2C_Master_Receive(&AP_I2C_HANDLE, AP_I2C_ADDR, aRxBuffer, (uint16_t)RXBUFFERSIZE, (uint32_t)1000) != HAL_OK)
+    {
+        /* Error_Handler() function is called when Timeout error occurs.
+         * When Acknowledge failure occurs (Slave don't acknowledge it's address)
+         * Master restarts communication
+         */
+        if (HAL_I2C_GetError(&AP_I2C_HANDLE) != HAL_I2C_ERROR_AF)
+        {
+            //DEBUG(3, "In I2C::WriteBuffer -> error");
+            //Error_Handler(4);
+					PUTZ_ASSERT(false);
+        }
+    }
+ 
+    /* -> Wait for the end of the transfer */
+    /* Before starting a new communication transfer, you need to check the current
+     * state of the peripheral; if it’s busy you need to wait for the end of current
+     * transfer before starting a new one.
+     * For simplicity reasons, this example is just waiting till the end of the
+     * transfer, but application may perform other tasks while transfer operation
+     * is ongoing.
+     **/
+    while (HAL_I2C_GetState(&AP_I2C_HANDLE) != HAL_I2C_STATE_READY)
+    {
+    }
+}
+
