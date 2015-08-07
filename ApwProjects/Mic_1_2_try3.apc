@@ -1,5 +1,5 @@
 #####################################################
-# Date:        Monday, 20/July/'15
+# Date:        Friday, 07/August/'15
 # Interface:   Simulation (NONE)
 # Product:     STA321MP DK
 # Description: <none>
@@ -18,12 +18,12 @@ Reg[07h] = 7Ah ## Configuration Register H
 Reg[08h] = 80h ## Configuration Register I
 Reg[09h] = 00h ## Master Mute
 Reg[0Ah] = 00h ## Master Volume
-Reg[0Bh] = 2Eh ## Channel 1 Volume
-Reg[0Ch] = 2Eh ## Channel 2 Volume
-Reg[0Dh] = 34h ## Channel 3 Volume
-Reg[0Eh] = 34h ## Channel 4 Volume
-Reg[0Fh] = 48h ## Channel 5 Volume
-Reg[10h] = 47h ## Channel 6 Volume
+Reg[0Bh] = 60h ## Channel 1 Volume
+Reg[0Ch] = 60h ## Channel 2 Volume
+Reg[0Dh] = 60h ## Channel 3 Volume
+Reg[0Eh] = 60h ## Channel 4 Volume
+Reg[0Fh] = 60h ## Channel 5 Volume
+Reg[10h] = 60h ## Channel 6 Volume
 Reg[11h] = 60h ## Channel 7 Volume
 Reg[12h] = 60h ## Channel 8 Volume
 Reg[13h] = 10h ## Channel 1 Mute, VolBP, Trim

@@ -214,15 +214,26 @@ BOOL Putz01Run(void) {
 	memset(SaiABuf,0,sizeof(SaiABuf)); 
 	memset(&SaiBBufCtl,0,sizeof(SaiBBufCtl)); 
 	memset(SaiBBuf,0,sizeof(SaiBBuf));
-	ApDumpParameterFiles();
+	{ BOOL b = 0;	//Change this in the debugger if you want a dump
+		if (!b) {
+			printf ("Putz01Run bypassing ApDumpParameterFiles\r\n");
+			printf ("Change b to TRUE in debugger to get a dump!\r\n");
+		} else {
+			ApDumpParameterFiles();
+		}
+	}
 	ApInitialize();
+	// Stop the I2s audio stream from the Microphone Processor
+	ApI2sOutputEnable(FALSE);
 #if USING_I2S
 	Putz01I2S2Start();
 //	Putz01I2S3Start();
 //	Putz01SaiAStart();
 #endif //USING_I2S
+	Putz01SaiAStart();
 	Putz01SaiBStart();
-	
+	// Star the I2s audio stream from the Microphone Processor
+	ApI2sOutputEnable(TRUE);
 	while (1) {
 //		HAL_Delay(1000);
 //		for (int i = 0; i < (1<<20); i++); 
