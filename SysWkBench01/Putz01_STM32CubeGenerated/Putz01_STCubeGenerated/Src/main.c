@@ -34,6 +34,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
 #include "putz01.h"
+//#include "i2c_setup.h"
 
 /* USER CODE BEGIN Includes */
 
@@ -80,6 +81,8 @@ static void MX_USART3_UART_Init(void);
 
 /* USER CODE END 0 */
 
+char testSend[5] = "START";
+
 int main(void)
 {
 
@@ -108,6 +111,7 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
   Putz01Init();
+  I2C2_WriteBuffer((uint8_t) 4, (uint8_t *)testSend, (uint8_t) 5, hi2c2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -115,7 +119,8 @@ int main(void)
   while (1)
   {
   /* USER CODE END WHILE */
-	  Putz01Run();
+    Putz01Run();
+    printf("looping\r\n");
 
   /* USER CODE BEGIN 3 */
 
@@ -200,12 +205,12 @@ void MX_I2S2_Init(void)
 
   hi2s2.Instance = SPI2;
   hi2s2.Init.Mode = I2S_MODE_SLAVE_RX;
-  hi2s2.Init.Standard = I2S_STANDARD_MSB;
-  hi2s2.Init.DataFormat = I2S_DATAFORMAT_32B;
+  hi2s2.Init.Standard = I2S_STANDARD_PHILIPS;
+  hi2s2.Init.DataFormat = I2S_DATAFORMAT_24B;
   hi2s2.Init.MCLKOutput = I2S_MCLKOUTPUT_DISABLE;
   hi2s2.Init.AudioFreq = I2S_AUDIOFREQ_48K;
   hi2s2.Init.CPOL = I2S_CPOL_LOW;
-  hi2s2.Init.ClockSource = I2S_CLOCK_PLL;
+  hi2s2.Init.ClockSource = I2S_CLOCK_EXTERNAL;
   hi2s2.Init.FullDuplexMode = I2S_FULLDUPLEXMODE_DISABLE;
   HAL_I2S_Init(&hi2s2);
 

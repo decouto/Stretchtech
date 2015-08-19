@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32f4xx_hal_flash_ex.c
   * @author  MCD Application Team
-  * @version V1.3.1
-  * @date    25-March-2015
+  * @version V1.3.2
+  * @date    26-June-2015
   * @brief   Extended FLASH HAL module driver.
   *          This file provides firmware functions to manage the following 
   *          functionalities of the FLASH extension peripheral:
@@ -95,18 +95,18 @@
 /* Private define ------------------------------------------------------------*/
 /** @addtogroup FLASHEx_Private_Constants
   * @{
-  */    
+  */
 #define SECTOR_MASK               ((uint32_t)0xFFFFFF07)
 #define FLASH_TIMEOUT_VALUE       ((uint32_t)50000)/* 50 s */
 /**
   * @}
   */
-    
+
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /** @addtogroup FLASHEx_Private_Variables
   * @{
-  */    
+  */
 extern FLASH_ProcessTypeDef pFlash;
 /**
   * @}
@@ -125,7 +125,7 @@ static HAL_StatusTypeDef  FLASH_OB_UserConfig(uint8_t Iwdg, uint8_t Stop, uint8_
 static HAL_StatusTypeDef  FLASH_OB_BOR_LevelConfig(uint8_t Level);
 static uint8_t            FLASH_OB_GetUser(void);
 static uint16_t           FLASH_OB_GetWRP(void);
-static FlagStatus         FLASH_OB_GetRDP(void);
+static uint8_t            FLASH_OB_GetRDP(void);
 static uint8_t            FLASH_OB_GetBOR(void);
 
 #if defined(STM32F401xC) || defined(STM32F401xE) || defined(STM32F411xE) || defined(STM32F446xx)
@@ -221,7 +221,7 @@ HAL_StatusTypeDef HAL_FLASHEx_Erase(FLASH_EraseInitTypeDef *pEraseInit, uint32_t
         FLASH->CR &= (~FLASH_CR_SER);
         FLASH->CR &= SECTOR_MASK; 
 
-        if(status != HAL_OK) 
+        if(status != HAL_OK)
         {
           /* In case of error, stop erase procedure and return the faulty sector*/
           *SectorError = index;
@@ -361,16 +361,16 @@ void HAL_FLASHEx_OBGetConfig(FLASH_OBProgramInitTypeDef *pOBInit)
   pOBInit->OptionType = OPTIONBYTE_WRP | OPTIONBYTE_RDP | OPTIONBYTE_USER | OPTIONBYTE_BOR;
 
   /*Get WRP*/
-  pOBInit->WRPSector = FLASH_OB_GetWRP();
+  pOBInit->WRPSector = (uint32_t)FLASH_OB_GetWRP();
 
   /*Get RDP Level*/
-  pOBInit->RDPLevel = FLASH_OB_GetRDP();
+  pOBInit->RDPLevel = (uint32_t)FLASH_OB_GetRDP();
 
   /*Get USER*/
-  pOBInit->USERConfig = FLASH_OB_GetUser();
+  pOBInit->USERConfig = (uint8_t)FLASH_OB_GetUser();
 
   /*Get BOR Level*/
-  pOBInit->BORLevel = FLASH_OB_GetBOR();
+  pOBInit->BORLevel = (uint32_t)FLASH_OB_GetBOR();
 }
 
 #if defined(STM32F427xx) || defined(STM32F437xx) || defined(STM32F429xx)|| defined(STM32F439xx) ||\
@@ -397,7 +397,7 @@ HAL_StatusTypeDef HAL_FLASHEx_AdvOBProgram (FLASH_AdvOBProgramInitTypeDef *pAdvO
     if((pAdvOBInit->PCROPState) == OB_PCROP_STATE_ENABLE)
     {
       /*Enable of Write protection on the selected Sector*/
-#if defined(STM32F401xC) || defined(STM32F401xE) || defined(STM32F411xE) || defined(STM32F446xx) 
+#if defined(STM32F401xC) || defined(STM32F401xE) || defined(STM32F411xE) || defined(STM32F446xx)
       status = FLASH_OB_EnablePCROP(pAdvOBInit->Sectors);
 #else  /* STM32F427xx || STM32F437xx || STM32F429xx|| STM32F439xx */
       status = FLASH_OB_EnablePCROP(pAdvOBInit->SectorsBank1, pAdvOBInit->SectorsBank2, pAdvOBInit->Banks);
@@ -406,7 +406,7 @@ HAL_StatusTypeDef HAL_FLASHEx_AdvOBProgram (FLASH_AdvOBProgramInitTypeDef *pAdvO
     else
     {
       /*Disable of Write protection on the selected Sector*/
-#if defined(STM32F401xC) || defined(STM32F401xE) || defined(STM32F411xE) || defined(STM32F446xx) 
+#if defined(STM32F401xC) || defined(STM32F401xE) || defined(STM32F411xE) || defined(STM32F446xx)
       status = FLASH_OB_DisablePCROP(pAdvOBInit->Sectors);
 #else /* STM32F427xx || STM32F437xx || STM32F429xx|| STM32F439xx */
       status = FLASH_OB_DisablePCROP(pAdvOBInit->SectorsBank1, pAdvOBInit->SectorsBank2, pAdvOBInit->Banks);
@@ -456,7 +456,7 @@ void HAL_FLASHEx_AdvOBGetConfig(FLASH_AdvOBProgramInitTypeDef *pAdvOBInit)
   *         Global Read Out Protection modification (from level1 to level0) 
   * @note   Once SPRMOD bit is active unprotection of a protected sector is not possible 
   * @note   Read a protected sector will set RDERR Flag and write a protected sector will set WRPERR Flag
-  * @note   This function can be used only for STM32F42xxx/STM32F43xxx/STM32F401xx/STM32F411xx/STM32F446xx devices.     
+  * @note   This function can be used only for STM32F42xxx/STM32F43xxx/STM32F401xx/STM32F411xx/STM32F446xx devices.
   * 
   * @retval HAL Status
   */
@@ -480,7 +480,7 @@ HAL_StatusTypeDef HAL_FLASHEx_OB_SelectPCROP(void)
   *         Global Read Out Protection modification (from level1 to level0) 
   * @note   Once SPRMOD bit is active unprotection of a protected sector is not possible 
   * @note   Read a protected sector will set RDERR Flag and write a protected sector will set WRPERR Flag
-  * @note   This function can be used only for STM32F42xxx/STM32F43xxx/STM32F401xx/STM32F411xx/STM32F446xx devices.      
+  * @note   This function can be used only for STM32F42xxx/STM32F43xxx/STM32F401xx/STM32F411xx/STM32F446xx devices.
   * 
   * @retval HAL Status
   */
@@ -520,13 +520,13 @@ uint16_t HAL_FLASHEx_OB_GetBank2WRP(void)
   * @brief  Full erase of FLASH memory sectors 
   * @param  VoltageRange: The device voltage range which defines the erase parallelism.  
   *          This parameter can be one of the following values:
-  *            @arg FLASH_VOLTAGE_RANGE_1: when the device voltage range is 1.8V to 2.1V, 
+  *            @arg FLASH_VOLTAGE_RANGE_1: when the device voltage range is 1.8V to 2.1V,
   *                                  the operation will be done by byte (8-bit) 
   *            @arg FLASH_VOLTAGE_RANGE_2: when the device voltage range is 2.1V to 2.7V,
   *                                  the operation will be done by half word (16-bit)
   *            @arg FLASH_VOLTAGE_RANGE_3: when the device voltage range is 2.7V to 3.6V,
   *                                  the operation will be done by word (32-bit)
-  *            @arg FLASH_VOLTAGE_RANGE_4: when the device voltage range is 2.7V to 3.6V + External Vpp, 
+  *            @arg FLASH_VOLTAGE_RANGE_4: when the device voltage range is 2.7V to 3.6V + External Vpp,
   *                                  the operation will be done by double word (64-bit)
   * 
   * @param  Banks: Banks to be erased
@@ -572,13 +572,13 @@ static void FLASH_MassErase(uint8_t VoltageRange, uint32_t Banks)
   *         The value of this parameter depend on device used within the same series      
   * @param  VoltageRange: The device voltage range which defines the erase parallelism.  
   *          This parameter can be one of the following values:
-  *            @arg FLASH_VOLTAGE_RANGE_1: when the device voltage range is 1.8V to 2.1V, 
+  *            @arg FLASH_VOLTAGE_RANGE_1: when the device voltage range is 1.8V to 2.1V,
   *                                  the operation will be done by byte (8-bit) 
   *            @arg FLASH_VOLTAGE_RANGE_2: when the device voltage range is 2.1V to 2.7V,
   *                                  the operation will be done by half word (16-bit)
   *            @arg FLASH_VOLTAGE_RANGE_3: when the device voltage range is 2.7V to 3.6V,
   *                                  the operation will be done by word (32-bit)
-  *            @arg FLASH_VOLTAGE_RANGE_4: when the device voltage range is 2.7V to 3.6V + External Vpp, 
+  *            @arg FLASH_VOLTAGE_RANGE_4: when the device voltage range is 2.7V to 3.6V + External Vpp,
   *                                  the operation will be done by double word (64-bit)
   * 
   * @retval None
@@ -609,7 +609,7 @@ void FLASH_Erase_Sector(uint32_t Sector, uint8_t VoltageRange)
   }
 
   /* Need to add offset of 4 when sector higher than FLASH_SECTOR_11 */
-  if(Sector > FLASH_SECTOR_11) 
+  if(Sector > FLASH_SECTOR_11)
   {
     Sector += 4;
   }
@@ -712,7 +712,7 @@ static HAL_StatusTypeDef FLASH_OB_EnableWRP(uint32_t WRPSector, uint32_t Banks)
   *            @arg FLASH_BANK_2: Bank2 to be erased
   *            @arg FLASH_BANK_BOTH: Bank1 and Bank2 to be erased
   *
-  * @retval HAL Status   
+  * @retval HAL Status
   */
 static HAL_StatusTypeDef FLASH_OB_DisableWRP(uint32_t WRPSector, uint32_t Banks)
 {
@@ -932,13 +932,13 @@ static HAL_StatusTypeDef FLASH_OB_DisablePCROP(uint32_t SectorBank1, uint32_t Se
   * @brief  Mass erase of FLASH memory
   * @param  VoltageRange: The device voltage range which defines the erase parallelism.  
   *          This parameter can be one of the following values:
-  *            @arg FLASH_VOLTAGE_RANGE_1: when the device voltage range is 1.8V to 2.1V, 
+  *            @arg FLASH_VOLTAGE_RANGE_1: when the device voltage range is 1.8V to 2.1V,
   *                                  the operation will be done by byte (8-bit) 
   *            @arg FLASH_VOLTAGE_RANGE_2: when the device voltage range is 2.1V to 2.7V,
   *                                  the operation will be done by half word (16-bit)
   *            @arg FLASH_VOLTAGE_RANGE_3: when the device voltage range is 2.7V to 3.6V,
   *                                  the operation will be done by word (32-bit)
-  *            @arg FLASH_VOLTAGE_RANGE_4: when the device voltage range is 2.7V to 3.6V + External Vpp, 
+  *            @arg FLASH_VOLTAGE_RANGE_4: when the device voltage range is 2.7V to 3.6V + External Vpp,
   *                                  the operation will be done by double word (64-bit)
   * 
   * @param  Banks: Banks to be erased
@@ -968,13 +968,13 @@ static void FLASH_MassErase(uint8_t VoltageRange, uint32_t Banks)
   *         The value of this parameter depend on device used within the same series      
   * @param  VoltageRange: The device voltage range which defines the erase parallelism.  
   *          This parameter can be one of the following values:
-  *            @arg FLASH_VOLTAGE_RANGE_1: when the device voltage range is 1.8V to 2.1V, 
+  *            @arg FLASH_VOLTAGE_RANGE_1: when the device voltage range is 1.8V to 2.1V,
   *                                  the operation will be done by byte (8-bit) 
   *            @arg FLASH_VOLTAGE_RANGE_2: when the device voltage range is 2.1V to 2.7V,
   *                                  the operation will be done by half word (16-bit)
   *            @arg FLASH_VOLTAGE_RANGE_3: when the device voltage range is 2.7V to 3.6V,
   *                                  the operation will be done by word (32-bit)
-  *            @arg FLASH_VOLTAGE_RANGE_4: when the device voltage range is 2.7V to 3.6V + External Vpp, 
+  *            @arg FLASH_VOLTAGE_RANGE_4: when the device voltage range is 2.7V to 3.6V + External Vpp,
   *                                  the operation will be done by double word (64-bit)
   * 
   * @retval None
@@ -1212,7 +1212,6 @@ static HAL_StatusTypeDef FLASH_OB_UserConfig(uint8_t Iwdg, uint8_t Stop, uint8_t
   }
   
   return status; 
-
 }
 
 /**
@@ -1235,7 +1234,6 @@ static HAL_StatusTypeDef FLASH_OB_BOR_LevelConfig(uint8_t Level)
   *(__IO uint8_t *)OPTCR_BYTE0_ADDRESS |= Level;
   
   return HAL_OK;
-  
 }
 
 /**
@@ -1261,17 +1259,27 @@ static uint16_t FLASH_OB_GetWRP(void)
 
 /**
   * @brief  Returns the FLASH Read Protection level.
-  * @retval FlagStatus FLASH Readout Protection Status:
-  *           - SET, when OB_RDP_Level_1 or OB_RDP_Level_2 is set
-  *           - RESET, when OB_RDP_Level_0 is set
+  * @retval FLASH ReadOut Protection Status:
+  *         This parameter can be one of the following values:
+  *            @arg OB_RDP_LEVEL_0: No protection
+  *            @arg OB_RDP_LEVEL_1: Read protection of the memory
+  *            @arg OB_RDP_LEVEL_2: Full chip protection
   */
-static FlagStatus FLASH_OB_GetRDP(void)
+static uint8_t FLASH_OB_GetRDP(void)
 {
-  FlagStatus readstatus = RESET;
+  uint8_t readstatus = OB_RDP_LEVEL_0;
 
-  if((*(__IO uint8_t*)(OPTCR_BYTE1_ADDRESS) != (uint8_t)OB_RDP_LEVEL_0))
+  /*if((*(__IO uint8_t*)(OPTCR_BYTE1_ADDRESS) == (uint8_t)OB_RDP_LEVEL_2))
   {
-    readstatus = SET;
+    readstatus = OB_RDP_LEVEL_2;
+  }*/
+  if((*(__IO uint8_t*)(OPTCR_BYTE1_ADDRESS) == (uint8_t)OB_RDP_LEVEL_1))
+  {
+    readstatus = OB_RDP_LEVEL_1;
+  }
+  else
+  {
+    readstatus = OB_RDP_LEVEL_0;
   }
   
   return readstatus;
